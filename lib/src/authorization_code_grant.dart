@@ -232,8 +232,8 @@ class AuthorizationCodeGrant {
   /// [FormatError] if the `state` parameter doesn't match the original value.
   ///
   /// Throws [AuthorizationException] if the authorization fails.
-  Future<Client> handleAuthorizationResponse(
-      Map<String, String> parameters) async {
+  Future<Client> handleAuthorizationResponse(Map<String, String> parameters,
+      {bool useIdToken = false}) async {
     if (_state == _State.initial) {
       throw StateError('The authorization URL has not yet been generated.');
     } else if (_state == _State.finished) {
@@ -264,7 +264,8 @@ class AuthorizationCodeGrant {
           '"code".');
     }
 
-    return await _handleAuthorizationCode(parameters['code']);
+    return await _handleAuthorizationCode(parameters['code'],
+        useIdToken: useIdToken);
   }
 
   /// Processes an authorization code directly.
@@ -295,7 +296,8 @@ class AuthorizationCodeGrant {
 
   /// This works just like [handleAuthorizationCode], except it doesn't validate
   /// the state beforehand.
-  Future<Client> _handleAuthorizationCode(String authorizationCode) async {
+  Future<Client> _handleAuthorizationCode(String authorizationCode,
+      {bool useIdToken = false}) async {
     var startTime = DateTime.now();
 
     var headers = <String, String>{};
@@ -327,7 +329,8 @@ class AuthorizationCodeGrant {
         secret: secret,
         basicAuth: _basicAuth,
         httpClient: _httpClient,
-        onCredentialsRefreshed: _onCredentialsRefreshed);
+        onCredentialsRefreshed: _onCredentialsRefreshed,
+        useIdToken: useIdToken);
   }
 
   /// Randomly generate a 128 character string to be used as the PKCE code verifier

@@ -57,6 +57,9 @@ class Client extends http.BaseClient {
   /// certainty that a client is who it claims to be.
   final String secret;
 
+  /// User Id token instead of Access Token for Authorization
+  final bool useIdToken;
+
   /// The credentials this client uses to prove to the resource server that it's
   /// authorized.
   ///
@@ -87,6 +90,7 @@ class Client extends http.BaseClient {
   Client(this._credentials,
       {this.identifier,
       this.secret,
+      this.useIdToken = false,
       CredentialsRefreshedCallback onCredentialsRefreshed,
       bool basicAuth = true,
       http.Client httpClient})
@@ -109,7 +113,8 @@ class Client extends http.BaseClient {
       await refreshCredentials();
     }
 
-    request.headers['authorization'] = 'Bearer ${credentials.accessToken}';
+    request.headers['authorization'] =
+        'Bearer ${useIdToken == false ? credentials.accessToken : credentials.idToken}';
     var response = await _httpClient.send(request);
 
     if (response.statusCode != 401) return response;
