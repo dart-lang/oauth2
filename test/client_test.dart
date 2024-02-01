@@ -189,6 +189,21 @@ void main() {
 
       expect(client.refreshCredentials(), throwsA(isStateError));
     });
+
+    test("won't send a request with closed client", () {
+      var credentials = oauth2.Credentials('access token');
+      var client = oauth2.Client(credentials,
+          identifier: 'identifier', secret: 'secret', httpClient: httpClient);
+
+      expect(client.isClosed, equals(false));
+
+      client.close();
+
+      expect(client.isClosed, equals(true));
+
+      expect(client.read(requestUri),
+          throwsA(const TypeMatcher<http.ClientException>()));
+    });
   });
 
   group('with invalid credentials', () {

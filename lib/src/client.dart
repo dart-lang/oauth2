@@ -66,6 +66,9 @@ class Client extends http.BaseClient {
   Credentials get credentials => _credentials;
   Credentials _credentials;
 
+  /// Indicates whether the client is closed or not.
+  bool get isClosed => _httpClient == null;
+
   /// Callback to be invoked whenever the credentials refreshed.
   final CredentialsRefreshedCallback? _onCredentialsRefreshed;
 
@@ -110,8 +113,13 @@ class Client extends http.BaseClient {
       await refreshCredentials();
     }
 
+    final httpClient = _httpClient;
+    if (httpClient == null) {
+      throw http.ClientException('Client is already closed.');
+    }
+
     request.headers['authorization'] = 'Bearer ${credentials.accessToken}';
-    var response = await _httpClient!.send(request);
+    var response = await httpClient.send(request);
 
     if (response.statusCode != 401) return response;
     if (!response.headers.containsKey('www-authenticate')) return response;
