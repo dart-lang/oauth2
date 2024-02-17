@@ -118,6 +118,7 @@ void main() {
         Object? accessToken = 'access token',
         Object? tokenType = 'bearer',
         Object? expiresIn,
+        Object? refreshExpiresIn,
         Object? refreshToken,
         Object? scope}) {
       return handle(http.Response(
@@ -125,6 +126,7 @@ void main() {
             'access_token': accessToken,
             'token_type': tokenType,
             'expires_in': expiresIn,
+            'refresh_expires_in': refreshExpiresIn,
             'refresh_token': refreshToken,
             'scope': scope
           }),
@@ -228,9 +230,23 @@ void main() {
           startTime.millisecondsSinceEpoch + 90 * 1000);
     });
 
+    test(
+        'with refresh-expires-in sets the expiration to ten seconds earlier than'
+        ' the server says', () {
+      var credentials = handleSuccess(refreshExpiresIn: 100);
+      expect(credentials.refreshToKenExpiration?.millisecondsSinceEpoch,
+          startTime.millisecondsSinceEpoch + 90 * 1000);
+    });
+
     test('with expires-in encoded as string', () {
       var credentials = handleSuccess(expiresIn: '110');
       expect(credentials.expiration?.millisecondsSinceEpoch,
+          startTime.millisecondsSinceEpoch + 100 * 1000);
+    });
+
+    test('with expires-in encoded as string', () {
+      var credentials = handleSuccess(refreshExpiresIn: '110');
+      expect(credentials.refreshToKenExpiration?.millisecondsSinceEpoch,
           startTime.millisecondsSinceEpoch + 100 * 1000);
     });
 
@@ -275,6 +291,7 @@ void main() {
         Object? accessToken = 'access token',
         Object? tokenType = 'bearer',
         Object? expiresIn,
+        Object? refreshExpiresIn,
         Object? idToken = 'decode me',
         Object? scope}) {
       return handle(http.Response(
@@ -282,6 +299,7 @@ void main() {
             'access_token': accessToken,
             'token_type': tokenType,
             'expires_in': expiresIn,
+            'refresh_expires_in': refreshExpiresIn,
             'id_token': idToken,
             'scope': scope
           }),

@@ -72,6 +72,12 @@ class Credentials {
   /// expiration date.
   final DateTime? expiration;
 
+  /// The date at which the refresh token will expire.
+  ///
+  /// This is likely to be a few seconds earlier than the server's idea of the
+  /// expiration date.
+  final DateTime? refreshToKenExpiration;
+
   /// The function used to parse parameters from a host's response.
   final GetParameters _getParameters;
 
@@ -85,8 +91,15 @@ class Credentials {
     return expiration != null && DateTime.now().isAfter(expiration);
   }
 
+  bool get isRefreshTokenExpired {
+    var refreshToKenExpiration = this.refreshToKenExpiration;
+    return refreshToKenExpiration != null &&
+        DateTime.now().isAfter(refreshToKenExpiration);
+  }
+
   /// Whether it's possible to refresh these credentials.
-  bool get canRefresh => refreshToken != null && tokenEndpoint != null;
+  bool get canRefresh =>
+      refreshToken != null && tokenEndpoint != null && !isRefreshTokenExpired;
 
   /// Creates a new set of credentials.
   ///
@@ -114,6 +127,7 @@ class Credentials {
       this.tokenEndpoint,
       Iterable<String>? scopes,
       this.expiration,
+      this.refreshToKenExpiration,
       String? delimiter,
       Map<String, dynamic> Function(MediaType? mediaType, String body)?
           getParameters})
@@ -176,6 +190,26 @@ class Credentials {
       expirationDateTime = DateTime.fromMillisecondsSinceEpoch(expiration);
     }
 
+    var accessTokenExpiration = parsed['accessTokenExpiration'];
+    DateTime? accessTokenExpirationDateTime;
+    if (accessTokenExpiration != null) {
+      validate(accessTokenExpiration is int,
+          'field "expiration" was not an int, was "$accessTokenExpiration"');
+      accessTokenExpiration = accessTokenExpiration as int;
+      accessTokenExpirationDateTime =
+          DateTime.fromMillisecondsSinceEpoch(accessTokenExpiration);
+    }
+
+    var refreshTokenExpiration = parsed['refreshTokenExpiration'];
+    DateTime? refreshTokenExpirationDateTime;
+    if (refreshTokenExpiration != null) {
+      validate(refreshTokenExpiration is int,
+          'field "expiration" was not an int, was "$refreshTokenExpiration"');
+      refreshTokenExpiration = refreshTokenExpiration as int;
+      refreshTokenExpirationDateTime =
+          DateTime.fromMillisecondsSinceEpoch(refreshTokenExpiration);
+    }
+
     return Credentials(
       parsed['accessToken'] as String,
       refreshToken: parsed['refreshToken'] as String?,
@@ -183,6 +217,7 @@ class Credentials {
       tokenEndpoint: tokenEndpointUri,
       scopes: (scopes as List).map((scope) => scope as String),
       expiration: expirationDateTime,
+      refreshToKenExpiration: refreshTokenExpirationDateTime,
     );
   }
 
@@ -196,7 +231,9 @@ class Credentials {
         'idToken': idToken,
         'tokenEndpoint': tokenEndpoint?.toString(),
         'scopes': scopes,
-        'expiration': expiration?.millisecondsSinceEpoch
+        'expiration': expiration?.millisecondsSinceEpoch,
+        'refreshTokenExpiration':
+            refreshToKenExpiration?.millisecondsSinceEpoch,
       });
 
   /// Returns a new set of refreshed credentials.
@@ -257,11 +294,14 @@ class Credentials {
     // The authorization server may issue a new refresh token. If it doesn't,
     // we should re-use the one we already have.
     if (credentials.refreshToken != null) return credentials;
-    return Credentials(credentials.accessToken,
-        refreshToken: refreshToken,
-        idToken: credentials.idToken,
-        tokenEndpoint: credentials.tokenEndpoint,
-        scopes: credentials.scopes,
-        expiration: credentials.expiration);
+    return Credentials(
+      credentials.accessToken,
+      refreshToken: refreshToken,
+      idToken: credentials.idToken,
+      tokenEndpoint: credentials.tokenEndpoint,
+      scopes: credentials.scopes,
+      expiration: credentials.expiration,
+      refreshToKenExpiration: credentials.refreshToKenExpiration,
+    );
   }
 }
