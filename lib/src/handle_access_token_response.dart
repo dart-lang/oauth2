@@ -84,6 +84,23 @@ Credentials handleAccessTokenResponse(http.Response response, Uri tokenEndpoint,
       }
     }
 
+    var refreshExpiresIn = parameters['refresh_expires_in'];
+    if (refreshExpiresIn != null) {
+      if (refreshExpiresIn is String) {
+        try {
+          refreshExpiresIn = double.parse(refreshExpiresIn).toInt();
+        } on FormatException {
+          throw FormatException(
+            'parameter "refresh_expires_in" could not be parsed as in, was: '
+            '"$refreshExpiresIn"',
+          );
+        }
+      } else if (refreshExpiresIn is! int) {
+        throw FormatException(
+            'parameter "expires_in" was not an int, was: "$refreshExpiresIn"');
+      }
+    }
+
     for (var name in ['refresh_token', 'id_token', 'scope']) {
       var value = parameters[name];
       if (value != null && value is! String) {
@@ -99,6 +116,15 @@ Credentials handleAccessTokenResponse(http.Response response, Uri tokenEndpoint,
         ? null
         : startTime.add(Duration(seconds: expiresIn as int) - _expirationGrace);
 
+    var accessExpiration = expiresIn == null
+        ? null
+        : startTime.add(Duration(seconds: expiresIn as int) - _expirationGrace);
+
+    var refreshExpiration = refreshExpiresIn == null
+        ? null
+        : startTime
+            .add(Duration(seconds: refreshExpiresIn as int) - _expirationGrace);
+
     return Credentials(
       parameters['access_token'] as String,
       refreshToken: parameters['refresh_token'] as String?,
@@ -106,6 +132,7 @@ Credentials handleAccessTokenResponse(http.Response response, Uri tokenEndpoint,
       tokenEndpoint: tokenEndpoint,
       scopes: scopes,
       expiration: expiration,
+      refreshToKenExpiration: refreshExpiration,
     );
   } on FormatException catch (e) {
     throw FormatException('Invalid OAuth response for "$tokenEndpoint": '

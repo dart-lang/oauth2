@@ -23,11 +23,24 @@ void main() {
     expect(credentials.isExpired, isFalse);
   });
 
-  test('is not expired if the expiration is in the future', () {
+  test('is not expired if no expiration exists', () {
+    var credentials =
+        oauth2.Credentials('access token', refreshToken: 'refresh token');
+    expect(credentials.isRefreshTokenExpired, isFalse);
+  });
+
+  test('is not expired if the accessExpiration is in the future', () {
     var expiration = DateTime.now().add(const Duration(hours: 1));
     var credentials =
         oauth2.Credentials('access token', expiration: expiration);
     expect(credentials.isExpired, isFalse);
+  });
+
+  test('is not expired if the refreshExpiration is in the future', () {
+    var expiration = DateTime.now().add(const Duration(hours: 1));
+    var credentials =
+        oauth2.Credentials('access token', refreshToKenExpiration: expiration);
+    expect(credentials.isRefreshTokenExpired, isFalse);
   });
 
   test('is expired if the expiration is in the past', () {
@@ -35,6 +48,13 @@ void main() {
     var credentials =
         oauth2.Credentials('access token', expiration: expiration);
     expect(credentials.isExpired, isTrue);
+  });
+
+  test('is expired if the refreshExpiration is in the past', () {
+    var expiration = DateTime.now().subtract(const Duration(hours: 1));
+    var credentials =
+        oauth2.Credentials('access token', refreshToKenExpiration: expiration);
+    expect(credentials.isRefreshTokenExpired, isTrue);
   });
 
   test("can't refresh without a refresh token", () {
@@ -268,13 +288,19 @@ void main() {
       var expiration = DateTime.now().subtract(const Duration(hours: 1));
       expiration = DateTime.fromMillisecondsSinceEpoch(
           expiration.millisecondsSinceEpoch);
+      var refreshExpiration = DateTime.now();
+      refreshExpiration = DateTime.fromMillisecondsSinceEpoch(
+          refreshExpiration.millisecondsSinceEpoch);
 
-      var credentials = oauth2.Credentials('access token',
-          refreshToken: 'refresh token',
-          idToken: 'id token',
-          tokenEndpoint: tokenEndpoint,
-          scopes: ['scope1', 'scope2'],
-          expiration: expiration);
+      var credentials = oauth2.Credentials(
+        'access token',
+        refreshToken: 'refresh token',
+        idToken: 'id token',
+        tokenEndpoint: tokenEndpoint,
+        scopes: ['scope1', 'scope2'],
+        expiration: expiration,
+        refreshToKenExpiration: refreshExpiration,
+      );
       var reloaded = oauth2.Credentials.fromJson(credentials.toJson());
 
       expect(reloaded.accessToken, equals(credentials.accessToken));
@@ -284,6 +310,8 @@ void main() {
           equals(credentials.tokenEndpoint.toString()));
       expect(reloaded.scopes, equals(credentials.scopes));
       expect(reloaded.expiration, equals(credentials.expiration));
+      expect(reloaded.refreshToKenExpiration,
+          equals(credentials.refreshToKenExpiration));
     });
 
     test('should throw a FormatException for invalid JSON', () {
