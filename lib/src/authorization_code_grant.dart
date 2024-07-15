@@ -218,6 +218,10 @@ class AuthorizationCodeGrant {
   /// passed to a server controlled by the client as query parameters on the
   /// redirect URL.
   ///
+  /// Use the *includeSecret* parameter if you would like to control whether the
+  /// client secret is to be contained in the post request for obtaining a
+  /// token.
+  ///
   /// It is a [StateError] to call this more than once, to call it before
   /// [getAuthorizationUrl] is called, or to call it after
   /// [handleAuthorizationCode] is called.
@@ -229,8 +233,8 @@ class AuthorizationCodeGrant {
   /// value.
   ///
   /// Throws [AuthorizationException] if the authorization fails.
-  Future<Client> handleAuthorizationResponse(
-      Map<String, String> parameters) async {
+  Future<Client> handleAuthorizationResponse(Map<String, String> parameters,
+      {bool includeSecret = true}) async {
     if (_state == _State.initial) {
       throw StateError('The authorization URL has not yet been generated.');
     } else if (_state == _State.finished) {
@@ -261,7 +265,8 @@ class AuthorizationCodeGrant {
           '"code".');
     }
 
-    return _handleAuthorizationCode(parameters['code']);
+    return _handleAuthorizationCode(parameters['code'],
+        includeSecret: includeSecret);
   }
 
   /// Processes an authorization code directly.
@@ -292,7 +297,8 @@ class AuthorizationCodeGrant {
 
   /// This works just like [handleAuthorizationCode], except it doesn't validate
   /// the state beforehand.
-  Future<Client> _handleAuthorizationCode(String? authorizationCode) async {
+  Future<Client> _handleAuthorizationCode(String? authorizationCode,
+      {bool includeSecret = true}) async {
     var startTime = DateTime.now();
 
     var headers = <String, String>{};
@@ -304,7 +310,7 @@ class AuthorizationCodeGrant {
       'code_verifier': _codeVerifier
     };
 
-    var secret = this.secret;
+    var secret = includeSecret ? this.secret : null;
     if (_basicAuth && secret != null) {
       headers['Authorization'] = basicAuthHeader(identifier, secret);
     } else {
