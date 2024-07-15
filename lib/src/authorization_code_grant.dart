@@ -111,6 +111,9 @@ class AuthorizationCodeGrant {
   /// constructor.
   final String _codeVerifier;
 
+  /// Whether to use PKCE for the authorization code flow.
+  final bool _enablePKCE;
+
   /// Creates a new grant.
   ///
   /// If [basicAuth] is `true` (the default), the client credentials are sent to
@@ -126,6 +129,18 @@ class AuthorizationCodeGrant {
   ///
   /// [onCredentialsRefreshed] will be called by the constructed [Client]
   /// whenever the credentials are refreshed.
+  ///
+  /// If [enablePKCE] is `true` (the default), the authorization code flow will
+  /// use PKCE as defined in
+  /// [RFC 7636](https://tools.ietf.org/html/rfc7636#section-4). Otherwise, the
+  /// [Authorization Request] will not include the added `code_challenge` and
+  /// `code_challenge_method` parameters, and the [Access Token Request] will
+  /// not include the added `code_verifier` parameter. This is not recommended,
+  /// and should only be used if the server doesn't support the
+  /// [RFC 7636](https://tools.ietf.org/html/rfc7636#section-4) extension.
+  ///
+  /// [Access Token Request]: https://tools.ietf.org/html/rfc7636#section-4.5
+  /// [Authorization Request]: https://tools.ietf.org/html/rfc7636#section-4.3
   ///
   /// [codeVerifier] String to be used as PKCE code verifier. If none is
   /// provided a random codeVerifier will be generated.
@@ -155,12 +170,14 @@ class AuthorizationCodeGrant {
       CredentialsRefreshedCallback? onCredentialsRefreshed,
       Map<String, dynamic> Function(MediaType? contentType, String body)?
           getParameters,
+      bool enablePKCE = true,
       String? codeVerifier})
       : _basicAuth = basicAuth,
         _httpClient = httpClient ?? http.Client(),
         _delimiter = delimiter ?? ' ',
         _getParameters = getParameters ?? parseJsonParameters,
         _onCredentialsRefreshed = onCredentialsRefreshed,
+        _enablePKCE = enablePKCE,
         _codeVerifier = codeVerifier ?? _createCodeVerifier();
 
   /// Returns the URL to which the resource owner should be redirected to
@@ -201,8 +218,8 @@ class AuthorizationCodeGrant {
       'response_type': 'code',
       'client_id': identifier,
       'redirect_uri': redirect.toString(),
-      'code_challenge': codeChallenge,
-      'code_challenge_method': 'S256'
+      if (_enablePKCE) 'code_challenge': codeChallenge,
+      if (_enablePKCE) 'code_challenge_method': 'S256'
     };
 
     if (state != null) parameters['state'] = state;
@@ -301,7 +318,7 @@ class AuthorizationCodeGrant {
       'grant_type': 'authorization_code',
       'code': authorizationCode,
       'redirect_uri': _redirectEndpoint.toString(),
-      'code_verifier': _codeVerifier
+      if (_enablePKCE) 'code_verifier': _codeVerifier
     };
 
     var secret = this.secret;

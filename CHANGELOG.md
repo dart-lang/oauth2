@@ -1,6 +1,7 @@
 ## 2.0.3-wip
 
 * Require `package:http` v1.0.0
+* Added optional `enablePKCE` parameter to `AuthorizationCodeGrant` constructor.
 
 ## 2.0.2
 
